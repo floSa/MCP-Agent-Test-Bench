@@ -4,9 +4,14 @@ Un squelette **pédagogique et réutilisable** pour brancher un ou plusieurs
 serveurs **MCP** (Model Context Protocol) sur un **agent LangGraph**, avec un
 LLM servi à part (Ollama ou vLLM).
 
-Ce dépôt répond à une question : *comment donner des outils à un agent sans
-réécrire de la colle pour chaque outil ?* La réponse tient en trois fichiers à
-connaître : un graphe d'agent, une liste de serveurs MCP, une URL de LLM.
+Ce dépôt répond à une question : *comment permettre à un agent d'utiliser de
+nouveaux outils (calculer, chercher, lire un fichier…) sans modifier le code de
+l'agent à chaque ajout ?*
+
+La réponse : les outils vivent dans des **serveurs MCP** que l'agent découvre
+tout seul. Ajouter un outil revient à ajouter une ligne dans une liste. Trois
+éléments à connaître : le graphe de l'agent, la liste des serveurs MCP, l'URL
+du LLM.
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)

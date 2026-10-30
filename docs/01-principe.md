@@ -1,7 +1,8 @@
 # 1. Le principe : un agent, des outils, un LLM
 
-Ce projet montre comment **donner des outils à un LLM** sans écrire de colle
-spécifique à chaque outil. Quatre acteurs interviennent.
+Ce projet montre comment **donner des outils à un LLM** (calculer, chercher,
+lire un fichier…) sans modifier le code de l'agent à chaque nouvel outil.
+Quatre acteurs interviennent.
 
 ## Les quatre acteurs
 
@@ -33,9 +34,9 @@ flowchart LR
 
 ## Pourquoi MCP
 
-Sans MCP, chaque outil se branche à la main : il faut écrire sa description pour
-le LLM, son code d'appel, sa gestion d'erreurs, et recommencer pour chaque
-framework d'agent.
+Sans MCP, chaque outil se branche à la main dans l'agent : il faut écrire sa
+description pour le LLM, le code qui l'appelle et la gestion de ses erreurs, puis
+tout recommencer pour chaque nouvel outil ou chaque framework d'agent.
 
 **MCP (Model Context Protocol)** est un standard : un serveur MCP publie ses
 outils dans un format unique (nom, description, paramètres typés). Tout agent
