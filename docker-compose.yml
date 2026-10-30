@@ -1,71 +1,38 @@
 # =============================================================================
-# Tutoriel MCP : petit LLM local + serveur d'outils FastMCP + agent ReAct
+# Exemple « calculatrice » : un agent LangGraph + un arbitre anti-triche, branché
+# sur un serveur MCP et sur un LLM EXTERNE (Ollama ou vLLM). Aucun LLM ici.
 #
-#   ┌────────┐   HTTP /api/chat   ┌───────┐   MCP (HTTP)   ┌────────────┐
-#   │ client │ ───▶ ┌───────┐ ───▶│ ollama│                │ mcp-server │
-#   │ (vous) │      │ agent │     └───────┘                │ (FastMCP)  │
-#   └────────┘      │ ReAct │ ──────────────────────────▶  └────────────┘
-#                   └───────┘        appels d'outils
+#   ┌────────┐       ┌──────────────────────┐   MCP (HTTP)   ┌──────────────────┐
+#   │   ui   │ ────▶ │ agent (LangGraph +   │ ─────────────▶ │ mcp-calculatrice │
+#   └────────┘       │        arbitre)      │                └──────────────────┘
+#                    └──────────┬───────────┘
+#                               │ API /v1 (compatible OpenAI)
+#                               ▼
+#                    LLM : Ollama central, vLLM, ou Ollama local
 #
-# Démarrage :        docker compose up -d --build
+# Le LLM se choisit par un fichier d'override (voir le Makefile) :
+#   make up         -> docker-compose.llm-central.yml (service LLM partagé)
+#   make up-local   -> docker-compose.llm-local.yml   (Ollama embarqué)
+#
 # Tests (sans LLM) : docker compose --profile test run --rm tests
-# Tests e2e :        docker compose --profile e2e run --rm tests-e2e
+# Tests e2e        : docker compose --profile e2e run --rm tests-e2e
 # =============================================================================
 
 services:
 
-  # --- 1. Le petit LLM local, servi par Ollama ------------------------------
-  ollama:
-    image: ollama/ollama:latest
-    container_name: calculatrice-ollama
-    # Acceleration GPU : Ollama detecte et utilise automatiquement le GPU une
-    # fois qu'il y a acces (necessite le toolkit nvidia-container cote hote).
-    # Sur GPU, l'inference passe de ~2 min a quelques secondes. Si vous n'avez
-    # pas de GPU nvidia, commentez ce bloc « deploy » : Ollama tournera sur CPU.
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    volumes:
-      # OLLAMA_MODELES (.env) pointe vers un dossier hôte PARTAGÉ entre
-      # projets : les modèles ne sont téléchargés qu'une seule fois.
-      # Sans cette variable, retombe sur un volume local au projet.
-      - ${OLLAMA_MODELES:-ollama_models}:/root/.ollama
-    ports:
-      - "11434:11434"
-    healthcheck:
-      test: ["CMD", "ollama", "ls"]
-      interval: 5s
-      timeout: 5s
-      retries: 60
-    restart: unless-stopped
-
-  # --- 2. Télécharge le modèle au premier démarrage, puis s'arrête ----------
-  ollama-init:
-    image: ollama/ollama:latest
-    container_name: calculatrice-ollama-init
-    depends_on:
-      ollama:
-        condition: service_healthy
-    environment:
-      OLLAMA_HOST: http://ollama:11434
-    entrypoint: ["/bin/sh", "-c", "ollama pull ${MODELE:-qwen2.5:1.5b}"]
-    restart: "no"
-
-  # --- 3. Le serveur MCP : expose les outils de la calculatrice -------------
-  mcp-server:
-    build: ./mcp_server
-    container_name: calculatrice-mcp
-    # OLLAMA_URL / MODELE servent a l'outil LLM convertir_texte_en_formule_libre.
+  # --- 1. Le serveur MCP : les outils de la calculatrice --------------------
+  mcp-calculatrice:
+    build: ./mcp_servers
+    container_name: mcp-calculatrice
+    command: ["python", "calculatrice.py"]
+    # LLM_* servent uniquement a l'outil convertir_texte_en_formule_libre.
     # Les autres outils (pur Python) n'en ont pas besoin.
     environment:
-      OLLAMA_URL: http://ollama:11434
-      MODELE: ${MODELE:-qwen2.5:1.5b}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama-central:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-gemma4:e4b}
+      LLM_API_KEY: ${LLM_API_KEY:-inutile}
     ports:
-      - "8000:8000"
+      - "8101:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/sante', timeout=2)"]
       interval: 5s
@@ -73,20 +40,19 @@ services:
       retries: 12
     restart: unless-stopped
 
-  # --- 4. L'agent ReAct : orchestre le LLM et les outils MCP ----------------
+  # --- 3. L'agent : graphe LangGraph + LLM + outils MCP --------------------
   agent:
     build: ./agent
-    container_name: calculatrice-agent
+    container_name: agent
     ports:
       - "8080:8080"
     environment:
-      OLLAMA_URL: http://ollama:11434
-      MCP_URL: http://mcp-server:8000/mcp/
-      MODELE: ${MODELE:-qwen2.5:1.5b}
+      # Valeurs par défaut : voir agent/config.py et .env.example.
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama-central:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-gemma4:e4b}
+      LLM_API_KEY: ${LLM_API_KEY:-inutile}
     depends_on:
-      ollama-init:
-        condition: service_completed_successfully
-      mcp-server:
+      mcp-calculatrice:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/sante', timeout=2)"]
@@ -95,12 +61,12 @@ services:
       retries: 12
     restart: unless-stopped
 
-  # --- 5. L'interface Streamlit : raisonnement + outils MCP visibles --------
+  # --- 4. L'interface Streamlit : appels MCP visibles en direct ------------
   ui:
     build: ./ui
-    container_name: calculatrice-ui
+    container_name: agent-ui
     ports:
-      - "8504:8501"
+      - "8501:8501"
     environment:
       AGENT_URL: http://agent:8080
     depends_on:
@@ -113,21 +79,21 @@ services:
       retries: 12
     restart: unless-stopped
 
-  # --- 6. MCPJam : inspecteur MCP (tester les outils à la main) -------------
-  # Ouvrir http://localhost:6274 puis connecter http://mcp-server:8000/mcp/
+  # --- 5. MCPJam : inspecteur MCP (tester les outils à la main) ------------
+  # Ouvrir http://localhost:6274 puis connecter http://mcp-calculatrice:8000/mcp/
   mcpjam:
     image: mcpjam/mcp-inspector:latest
-    container_name: calculatrice-mcpjam
+    container_name: mcpjam
     ports:
       - "6274:6274"
     environment:
       HOST: 0.0.0.0
     depends_on:
-      mcp-server:
+      mcp-calculatrice:
         condition: service_healthy
     restart: unless-stopped
 
-  # --- 7. Tests unitaires + intégration (rapides, sans LLM) -----------------
+  # --- 6. Tests unitaires + intégration (rapides, sans LLM) ----------------
   tests:
     build:
       context: .
@@ -135,7 +101,7 @@ services:
     profiles: ["test"]
     command: pytest tests -m "not e2e" -v --color=yes
 
-  # --- 8. Tests de bout en bout (stack complète + vrai LLM) -----------------
+  # --- 7. Tests de bout en bout (stack complète + vrai LLM) ----------------
   tests-e2e:
     build:
       context: .
@@ -143,7 +109,6 @@ services:
     profiles: ["e2e"]
     environment:
       AGENT_URL: http://agent:8080
-      MCP_URL: http://mcp-server:8000/mcp/
       UI_URL: http://ui:8501
     depends_on:
       agent:
@@ -151,6 +116,3 @@ services:
       ui:
         condition: service_healthy
     command: pytest tests -m e2e -v --color=yes
-
-volumes:
-  ollama_models:

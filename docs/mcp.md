@@ -29,7 +29,7 @@ que l'on utilise ici), des **resources** (données en lecture) et des **prompts*
 fonction décorée en outil MCP. Le nom, la docstring et les annotations de type
 deviennent automatiquement le schéma JSON que le client découvre.
 
-Extrait de [`mcp_server/serveur.py`](../mcp_server/serveur.py) :
+Extrait de [`mcp_servers/calculatrice.py`](../mcp_servers/calculatrice.py) :
 
 ```python
 from fastmcp import FastMCP
@@ -60,8 +60,8 @@ Ce qu'il faut retenir :
   `operateur: str`, `droite: float`) forment le schéma. Soignez la docstring :
   c'est elle qui guide le modèle.
 - **La logique est séparée** : les fonctions pures vivent dans
-  [`outils_calcul.py`](../mcp_server/outils_calcul.py), testables sans serveur ni
-  LLM. `serveur.py` ne fait que les exposer. C'est un patron recommandé : on
+  [`outils_calcul.py`](../mcp_servers/outils_calcul.py), testables sans serveur ni
+  LLM. `calculatrice.py` ne fait que les exposer. C'est un patron recommandé : on
   teste la logique unitairement, on garde la couche MCP fine.
 - **Les erreurs métier deviennent des `ToolError`** : le message remonte
   proprement au client (et donc au LLM, qui peut se corriger). Ici, une division
@@ -102,7 +102,7 @@ l'on rencontre en pratique :
 
 Le risque d'un outil LLM, c'est qu'il renvoie n'importe quoi. La règle d'or
 appliquée ici : **le LLM propose, le code déterministe dispose.** Concrètement
-([`serveur.py`](../mcp_server/serveur.py)) :
+([`calculatrice.py`](../mcp_servers/calculatrice.py)) :
 
 ```python
 @mcp.tool
@@ -121,8 +121,8 @@ tests `test_outil_llm_*` ([tests/test_serveur_mcp.py](../tests/test_serveur_mcp.
 le prouvent en simulant le LLM (sortie valide normalisée, sortie invalide
 rejetée), sans dépendre d'un vrai modèle.
 
-Note de couplage : l'outil LLM a besoin d'Ollama (`OLLAMA_URL` et `MODELE` sont
-passés au service `mcp-server` dans le compose). Les outils pur Python, eux,
+Note de couplage : l'outil LLM a besoin d'un serveur LLM (`LLM_BASE_URL` et `LLM_MODEL`
+sont passés au service `mcp-calculatrice` dans le compose). Les outils pur Python, eux,
 n'ont aucune dépendance externe.
 
 ### Pourquoi `calculer` n'accepte que deux opérandes
@@ -143,7 +143,7 @@ pas injecter un faux résultat.
 
 ## 4. Le transport : HTTP et l'endpoint /mcp/
 
-En bas de [`serveur.py`](../mcp_server/serveur.py) :
+En bas de [`calculatrice.py`](../mcp_servers/calculatrice.py) :
 
 ```python
 if __name__ == "__main__":
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 ```
 
 Le serveur écoute en HTTP. Les clients MCP s'y connectent sur
-**`http://mcp-server:8000/mcp/`** (depuis un autre conteneur du réseau Docker)
+**`http://mcp-calculatrice:8000/mcp/`** (depuis un autre conteneur du réseau Docker)
 ou **`http://localhost:8000/mcp/`** (depuis l'hôte). FastMCP gère le protocole
 (handshake, découverte, appels) sur cet endpoint.
 
@@ -173,7 +173,7 @@ async def sante(request: Request) -> JSONResponse:
     return JSONResponse({"statut": "ok", "service": "calculatrice-mcp"})
 ```
 
-C'est ce que le `healthcheck` du service `mcp-server` interroge dans le compose.
+C'est ce que le `healthcheck` du service `mcp-calculatrice` interroge dans le compose.
 
 ## 6. Ajouter votre propre outil (pas à pas)
 
@@ -184,14 +184,14 @@ Supposons que vous vouliez un outil `puissance` :
    def puissance(base: float, exposant: float) -> float:
        return base ** exposant
    ```
-2. **L'exposer** dans `serveur.py` :
+2. **L'exposer** dans `calculatrice.py` :
    ```python
    @mcp.tool
    def puissance(base: float, exposant: float) -> float:
        """Eleve base a la puissance exposant. Exemple : puissance(2, 3) -> 8."""
        return oc.puissance(base, exposant)
    ```
-3. **Reconstruire** le serveur : `docker compose up -d --build mcp-server`.
+3. **Reconstruire** le serveur : `docker compose up -d --build mcp-calculatrice`.
 
 C'est tout pour le serveur. L'agent **découvre** le nouvel outil
 automatiquement (il liste les outils au démarrage de chaque résolution). Si vous

@@ -1,11 +1,11 @@
-"""Petit client LLM pour le serveur MCP (appel a Ollama).
+"""Petit client LLM pour le serveur MCP (API /v1 : Ollama ou vLLM).
 
 Sert a l'outil « LLM » de demonstration : convertir une expression en langage
 naturel LIBRE en formule, quand le parseur deterministe ne couvre pas la
 formulation. Volontairement minimal : une seule fonction, synchrone.
 
 Le serveur MCP ne FAIT PAS confiance a la sortie du LLM : la formule proposee
-ici est ensuite validee par le tokeniseur deterministe (voir serveur.py).
+ici est ensuite validee par le tokeniseur deterministe (voir calculatrice.py).
 C'est le coeur du patron de robustesse « le LLM propose, le code dispose ».
 """
 
@@ -14,8 +14,9 @@ import re
 
 import httpx
 
-OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-MODELE = os.environ.get("MODELE", "qwen2.5:1.5b")
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1")
+LLM_MODEL = os.environ.get("LLM_MODEL", "gemma4:e4b")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "inutile")
 
 # On demande UNIQUEMENT la formule, en symboles, sans phrase autour.
 _PROMPT = """Tu convertis une expression mathematique ecrite en langage naturel en une formule.
@@ -37,25 +38,27 @@ Formule :"""
 def proposer_formule(texte: str) -> str:
     """Demande au LLM une formule pour `texte` et renvoie la chaine brute.
 
-    Ne valide rien : c'est l'appelant (serveur.py) qui passe le resultat au
+    Ne valide rien : c'est l'appelant (calculatrice.py) qui passe le resultat au
     tokeniseur deterministe. On se contente d'extraire une ligne plausible.
     """
     with httpx.Client(timeout=httpx.Timeout(120.0)) as http:
         reponse = http.post(
-            f"{OLLAMA_URL.rstrip('/')}/api/generate",
+            f"{LLM_BASE_URL.rstrip('/')}/chat/completions",
+            headers={"Authorization": f"Bearer {LLM_API_KEY}"},
             json={
-                "model": MODELE,
-                "prompt": _PROMPT % texte,
-                "stream": False,
-                "options": {"temperature": 0, "num_predict": 64},
+                "model": LLM_MODEL,
+                "messages": [{"role": "user", "content": _PROMPT % texte}],
+                "temperature": 0,
+                # marge pour les modeles qui « reflechissent » avant de repondre
+                "max_tokens": 512,
             },
         )
         reponse.raise_for_status()
-        brute = reponse.json().get("response", "")
+        brute = reponse.json()["choices"][0]["message"].get("content") or ""
 
     # On garde la premiere ligne non vide qui ressemble a une formule, et on
     # ne conserve que les caracteres autorises (chiffres, operateurs, parentheses).
-    # De toute facon, serveur.py revalide tout : ici on degrossit seulement.
+    # De toute facon, calculatrice.py revalide tout : ici on degrossit seulement.
     for ligne in brute.splitlines():
         ligne = ligne.split("=")[0]   # ignore une eventuelle partie « = resultat »
         candidat = "".join(re.findall(r"[0-9+\-*/().\s]", ligne))

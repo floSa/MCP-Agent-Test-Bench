@@ -16,8 +16,10 @@ Deux familles d'outils, volontairement, pour montrer les cas de figure :
     « le LLM propose, le code déterministe dispose » — jamais de sortie
     non vérifiée.
 
-Lancement : python serveur.py  (transport HTTP, endpoint /mcp/)
+Lancement : python calculatrice.py  (transport HTTP, endpoint /mcp/)
 """
+
+import os
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
@@ -114,8 +116,8 @@ def remplacer_calcul_par_resultat(formule: str, sous_expression: str, valeur: fl
 @mcp.custom_route("/sante", methods=["GET"])
 async def sante(request: Request) -> JSONResponse:
     """Endpoint de santé pour le healthcheck Docker (hors protocole MCP)."""
-    return JSONResponse({"statut": "ok", "service": "calculatrice-mcp"})
+    return JSONResponse({"statut": "ok", "service": "mcp-calculatrice"})
 
 
 if __name__ == "__main__":
-    mcp.run(transport="http", host="0.0.0.0", port=8000)
+    mcp.run(transport="http", host="0.0.0.0", port=int(os.environ.get("PORT", "8000")))

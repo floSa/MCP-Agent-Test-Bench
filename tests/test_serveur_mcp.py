@@ -8,9 +8,13 @@ import pytest
 from fastmcp import Client
 from fastmcp.exceptions import ToolError
 
+import calculatrice as serveur
 import llm
-import serveur
-from agent.boucle_react import extraire_donnees
+
+
+def extraire_donnees(resultat_outil):
+    """Valeur utile d'un CallToolResult FastMCP."""
+    return resultat_outil.data
 
 
 async def test_decouverte_des_outils():

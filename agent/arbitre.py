@@ -28,6 +28,20 @@ def est_nombre(texte: str) -> bool:
     return re.fullmatch(r"-?\d+(\.\d+)?", str(texte).strip()) is not None
 
 
+def extraire_nombre_final(contenu: str):
+    """Cherche le nombre annonce dans « REPONSE FINALE: 14 » (avec tolerance)."""
+    if not contenu:
+        return None
+    motif = re.search(r"REPONSE\s*FINALE\s*[:=]?\s*(-?\d+(?:[.,]\d+)?)",
+                      contenu, re.IGNORECASE)
+    if motif:
+        return float(motif.group(1).replace(",", "."))
+    nombres = re.findall(r"-?\d+(?:[.,]\d+)?", contenu)
+    if nombres:
+        return float(nombres[-1].replace(",", "."))
+    return None
+
+
 # Les deux outils de conversion (pur Python deterministe et LLM de secours)
 # jouent le meme role pour l'arbitre : produire la formule initiale. On les
 # traite donc de maniere interchangeable comme « premiere etape ».

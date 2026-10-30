@@ -1,0 +1,6 @@
+{
+  "calculatrice": {
+    "transport": "streamable_http",
+    "url": "http://mcp-calculatrice:8000/mcp/"
+  }
+}
