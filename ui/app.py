@@ -73,7 +73,8 @@ def afficher_evenement(evenement: dict) -> None:
 
     elif type_evenement == "resultat_outil":
         with st.container(border=True):
-            st.markdown(f"**Resultat** de `{evenement['nom']}`")
+            st.markdown(f"**Resultat** de `{evenement['nom']}`"
+                        + (" (erreur)" if evenement.get("erreur") else ""))
             st.code(evenement["contenu"], language="text")
 
     elif type_evenement == "reponse":

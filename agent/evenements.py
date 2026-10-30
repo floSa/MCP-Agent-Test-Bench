@@ -5,7 +5,7 @@ messages ». Ici chaque message devient un petit dict avec une clé « type » :
 
   {"type": "pensee",         "contenu": ...}             texte du modèle avant un outil
   {"type": "appel_outil",    "nom", "arguments"}         le modèle demande un outil
-  {"type": "resultat_outil", "nom", "contenu"}           ce que le serveur MCP a renvoyé
+  {"type": "resultat_outil", "nom", "contenu", "erreur"} ce que le serveur MCP a renvoyé
   {"type": "reponse",        "contenu": ...}             réponse finale du modèle
   {"type": "erreur",         "detail": ...}              limite d'étapes atteinte
   {"type": "fin",            "reponse", "etapes"}        dernier événement, toujours émis
@@ -43,7 +43,8 @@ def evenements_du_message(message) -> list:
         return [{"type": "reponse", "contenu": texte}]
     if isinstance(message, ToolMessage):
         return [{"type": "resultat_outil", "nom": message.name,
-                 "contenu": texte_du_contenu(message.content)}]
+                 "contenu": texte_du_contenu(message.content),
+                 "erreur": message.status == "error"}]
     return []
 
 

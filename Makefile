@@ -18,10 +18,10 @@ logs:
 	docker compose $(CENTRAL) logs -f agent mcp-maths mcp-texte
 
 test:          ## tests rapides : serveurs MCP, graphe, intégration (faux LLM)
-	docker compose --profile test run --rm tests
+	docker compose --profile test run --rm --build tests
 
 test-e2e:      ## tests de bout en bout avec le vrai LLM (stack démarrée)
-	docker compose $(CENTRAL) --profile e2e run --rm tests-e2e
+	docker compose $(CENTRAL) --profile e2e run --rm --build tests-e2e
 
 demo:          ## une question posée au vrai agent, trace pas-à-pas
 	docker compose $(CENTRAL) exec agent python -m agent.cli "Combien font 12 plus 30, puis mets le mot résultat en majuscules ?"
