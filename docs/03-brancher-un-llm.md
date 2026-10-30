@@ -37,7 +37,7 @@ l'URL change**. Tout se règle dans `.env` :
 | Serveur | `LLM_BASE_URL` | `LLM_MODEL` (exemple) |
 |---|---|---|
 | Ollama central | `http://ollama-central:11434/v1` | `gemma4:e4b` |
-| vLLM | `http://<service-vllm>:8000/v1` | le nom passé à `vllm serve` |
+| vLLM central | `http://vllm-central:8000/v1` | `gemma4:e4b` (nom servi, voir `VLLM_SERVED_NAMES`) |
 
 `LLM_API_KEY` reste à `inutile`, sauf si le serveur impose une clé (vLLM lancé
 avec `--api-key`).
@@ -61,31 +61,34 @@ le LLM par son nom de service (`ollama-central`).
 
 ## Cas 2 : vLLM
 
-Même procédure que le cas 1, avec deux différences.
+Le dépôt `llm-service` propose les deux moteurs sur deux **branches** :
+`service-ollama` (conteneur `ollama-central`) et `service-vllm` (conteneur
+`vllm-central`). Les deux joignent le réseau `llm-net`.
 
-- Dans `.env`, pointer vers le service vLLM et son modèle :
+**Un seul moteur à la fois** sur un GPU de 16 Go : vLLM réserve sa VRAM dès le
+démarrage (80 % par défaut). Pour passer d'Ollama à vLLM, arrêter l'un
+(`make down`), basculer sur l'autre branche de `llm-service`, puis `make up`.
 
-  ```
-  LLM_BASE_URL=http://<service-vllm>:8000/v1
-  LLM_MODEL=<nom du modèle servi>
-  ```
+Dans `.env` de ce projet :
 
-- Le service vLLM doit être lancé avec l'appel d'outils activé, sans quoi le
-  modèle ne pourra pas utiliser les serveurs MCP :
+```
+LLM_BASE_URL=http://vllm-central:8000/v1
+LLM_MODEL=gemma4:e4b
+```
 
-  ```bash
-  vllm serve <modèle> --enable-auto-tool-choice --tool-call-parser <parser>
-  ```
+`gemma4:e4b` est l'un des noms servis par `vllm-central`
+(`VLLM_SERVED_NAMES`), de sorte que **le même `LLM_MODEL` fonctionne avec les
+deux moteurs**. Le reste de la procédure est celui du cas 1 (`make up`).
 
-  Le `<parser>` dépend de la famille de modèle (voir la documentation vLLM,
-  section *Tool Calling*).
+Un vLLM monté à la main doit être lancé avec l'appel d'outils activé, sans quoi
+le modèle ne pourra pas utiliser les serveurs MCP :
 
-Le service vLLM doit aussi être attaché au réseau `llm-net` pour être joignable
-par son nom.
+```bash
+vllm serve <modèle> --enable-auto-tool-choice --tool-call-parser <parser>
+```
 
-> Dans l'état actuel du dépôt `llm-service`, seul Ollama est défini dans le
-> compose ; le dossier `vllm/` ne contient qu'un script d'entrée. Le support
-> vLLM de ce projet est donc documenté mais n'a pas été testé de bout en bout.
+Le `<parser>` dépend de la famille de modèle (voir la documentation vLLM,
+section *Tool Calling*).
 
 ## Cas 3 : pas de service central, Ollama embarqué
 
