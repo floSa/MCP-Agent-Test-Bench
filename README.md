@@ -1,4 +1,6 @@
-# Agent LangGraph + MCP : le squelette
+# MCP Agent Test Bench : le squelette agent LangGraph + MCP
+
+> Ancien nom du dépôt : `MCP-Maison` (le dossier local portait le même nom). Les anciennes adresses GitHub redirigent vers celle-ci.
 
 Un squelette **pédagogique et réutilisable** pour brancher un ou plusieurs
 serveurs **MCP** (Model Context Protocol) sur un **agent LangGraph**, avec un
@@ -25,7 +27,7 @@ du LLM.
 | Branche | Contenu |
 |---|---|
 | **`main`** (ici) | Le squelette générique et son tutoriel : agent LangGraph, deux serveurs MCP d'exemple, LLM externe. |
-| [`exemple/calculatrice`](https://github.com/floSa/MCP_maison/tree/exemple/calculatrice) | Un cas concret : un petit LLM qui calcule uniquement via des outils MCP. |
+| [`exemple/calculatrice`](https://github.com/floSa/MCP-Agent-Test-Bench/tree/exemple/calculatrice) | Un cas concret : un petit LLM qui calcule uniquement via des outils MCP. |
 
 ## Démarrage rapide
 

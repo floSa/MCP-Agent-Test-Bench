@@ -87,7 +87,7 @@ synthèse ».
 
 ## Un exemple complet : la calculatrice
 
-La branche [`exemple/calculatrice`](https://github.com/floSa/MCP_maison/tree/exemple/calculatrice)
+La branche [`exemple/calculatrice`](https://github.com/floSa/MCP-Agent-Test-Bench/tree/exemple/calculatrice)
 applique ce squelette à un cas concret : un petit modèle qui résout des calculs
 posés en français **sans jamais calculer lui-même**, chaque opération passant
 par des outils MCP.
