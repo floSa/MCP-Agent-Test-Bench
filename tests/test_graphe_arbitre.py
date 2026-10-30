@@ -81,3 +81,32 @@ async def test_reponse_fausse_refusee(url_mcp):
     refus = _refus(evenements)
     assert len(refus) == 1 and "ne correspond pas" in refus[0]["detail"]
     assert evenements[-1]["valide"] is True and evenements[-1]["reponse"] == 14
+
+
+async def test_refus_indique_la_prochaine_etape(url_mcp):
+    """Le modèle saute « remplacer » : le refus lui dit quoi appeler, et il s'y conforme."""
+    scenario = [
+        *SCENARIO_HONNETE[:3],                                      # jusqu'à calculer(3*4)
+        appel_outil("trouver_calcul_prioritaire", formule="12.0"),  # refusé
+        *SCENARIO_HONNETE[3:],
+    ]
+    evenements = await _jouer(url_mcp, scenario)
+    refus = _refus(evenements)
+    assert len(refus) == 1
+    assert "remplacer_calcul_par_resultat" in refus[0]["detail"]
+    assert "valeur = 12" in refus[0]["detail"]
+    assert evenements[-1]["valide"] is True
+
+
+async def test_appel_repete_est_refuse_avec_indice(url_mcp):
+    """Redemander le calcul prioritaire déjà obtenu : refusé, indice vers « calculer »."""
+    scenario = [
+        *SCENARIO_HONNETE[:2],
+        appel_outil("trouver_calcul_prioritaire", formule="3 * 4 + 2"),  # répété
+        *SCENARIO_HONNETE[2:],
+    ]
+    evenements = await _jouer(url_mcp, scenario)
+    refus = _refus(evenements)
+    assert len(refus) == 1 and "déjà faite" in refus[0]["detail"]
+    assert "calculer avec gauche = 3" in refus[0]["detail"]
+    assert evenements[-1]["valide"] is True

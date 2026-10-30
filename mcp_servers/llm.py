@@ -9,6 +9,7 @@ ici est ensuite validee par le tokeniseur deterministe (voir calculatrice.py).
 C'est le coeur du patron de robustesse « le LLM propose, le code dispose ».
 """
 
+import json
 import os
 import re
 
@@ -17,6 +18,7 @@ import httpx
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1")
 LLM_MODEL = os.environ.get("LLM_MODEL", "gemma4:e4b")
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "inutile")
+LLM_EXTRA_BODY = json.loads(os.environ.get("LLM_EXTRA_BODY") or "{}")
 
 # On demande UNIQUEMENT la formule, en symboles, sans phrase autour.
 _PROMPT = """Tu convertis une expression mathematique ecrite en langage naturel en une formule.
@@ -51,6 +53,7 @@ def proposer_formule(texte: str) -> str:
                 "temperature": 0,
                 # marge pour les modeles qui « reflechissent » avant de repondre
                 "max_tokens": 512,
+                **LLM_EXTRA_BODY,
             },
         )
         reponse.raise_for_status()

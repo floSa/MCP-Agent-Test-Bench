@@ -24,6 +24,12 @@ def normaliser_pour_comparer(formule) -> str:
     return " ".join(avec_espaces.split())
 
 
+def _fmt(nombre) -> str:
+    """12.0 -> '12', 2.5 -> '2.5' (pour écrire des consignes lisibles)."""
+    nombre = float(nombre)
+    return str(int(nombre)) if nombre.is_integer() else str(nombre)
+
+
 def est_nombre(texte: str) -> bool:
     return re.fullmatch(r"-?\d+(\.\d+)?", str(texte).strip()) is not None
 
@@ -58,11 +64,43 @@ class Arbitre:
         self.formule_courante = None
         self.dernier_calcul = None   # {"sous_expression": ..., "resultat": ...}
         self._priorite_validee = None
+        # Réponse du serveur MCP à trouver_calcul_prioritaire pour la formule
+        # courante (remise à zéro quand la formule change).
+        self._priorite_connue = None
 
     # -- vérification AVANT exécution d'un outil ----------------------------
 
     async def verifier_appel(self, nom: str, args: dict):
-        """Renvoie un message de refus (str), ou None si l'appel est autorisé."""
+        """Renvoie un message de refus (str), ou None si l'appel est autorisé.
+
+        Chaque refus indique la prochaine étape attendue : sans cela, un modèle
+        qui s'est perdu répète le même appel indéfiniment.
+        """
+        refus = await self._verifier_appel(nom, args)
+        return None if refus is None else f"{refus} {self.indice()}"
+
+    def indice(self) -> str:
+        """Prochaine étape attendue, déduite de l'état RÉEL (jamais du LLM)."""
+        courante = self.formule_courante
+        if courante is None:
+            return "Appelle convertir_texte_en_formule."
+        if self.dernier_calcul is not None:
+            d = self.dernier_calcul
+            return ("Appelle remplacer_calcul_par_resultat avec "
+                    f"formule = « {courante} », "
+                    f"sous_expression = « {d['sous_expression']} », "
+                    f"valeur = {_fmt(d['resultat'])}.")
+        if est_nombre(courante):
+            return "La formule est réduite : réponds « REPONSE FINALE: <nombre> »."
+        p = self._priorite_connue
+        if p is not None:
+            return ("Appelle calculer avec "
+                    f"gauche = {_fmt(p['gauche'])}, "
+                    f"operateur = « {p['operateur']} », "
+                    f"droite = {_fmt(p['droite'])}.")
+        return f"Appelle trouver_calcul_prioritaire avec formule = « {courante} »."
+
+    async def _verifier_appel(self, nom: str, args: dict):
         if nom in OUTILS_CONVERSION:
             if self.formule_courante is not None:
                 return ("Refusé : le texte a déjà été converti. La formule "
@@ -77,6 +115,8 @@ class Arbitre:
                 return (f"Refusé : la formule courante est "
                         f"« {self.formule_courante} », pas "
                         f"« {args.get('formule')} ».")
+            if self._priorite_connue is not None or self.dernier_calcul is not None:
+                return "Refusé : cette étape est déjà faite."
             return None
 
         if nom == "calculer":
@@ -125,6 +165,10 @@ class Arbitre:
         if nom in OUTILS_CONVERSION:
             self.formule_courante = str(resultat)
             self.formule_initiale = str(resultat)
+            self._priorite_connue = None
+        elif nom == "trouver_calcul_prioritaire":
+            if isinstance(resultat, dict) and not resultat.get("termine"):
+                self._priorite_connue = resultat
         elif nom == "calculer":
             self.dernier_calcul = {
                 "sous_expression": self._priorite_validee["sous_expression"],
@@ -133,6 +177,7 @@ class Arbitre:
         elif nom == "remplacer_calcul_par_resultat":
             self.formule_courante = str(resultat)
             self.dernier_calcul = None
+            self._priorite_connue = None
 
     # -- vérification de la réponse finale -----------------------------------
 

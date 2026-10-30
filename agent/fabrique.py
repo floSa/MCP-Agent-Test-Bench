@@ -20,6 +20,7 @@ def creer_modele() -> ChatOpenAI:
         model=config.LLM_MODEL,
         temperature=0,
         timeout=300,
+        extra_body=config.LLM_EXTRA_BODY or None,
     )
 
 

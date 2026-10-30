@@ -17,6 +17,11 @@ LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://ollama-central:11434/v1")
 LLM_MODEL = os.environ.get("LLM_MODEL", "gemma4:e4b")
 # Ollama ignore la clé ; vLLM l'exige seulement s'il a été lancé avec --api-key.
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "inutile")
+# Paramètres supplémentaires ajoutés à chaque requête, en JSON. Vide par défaut.
+# Exemple pour Gemma 4 sous vLLM, qui s'arrête net après un résultat d'outil
+# si sa réflexion est désactivée :
+#   LLM_EXTRA_BODY={"chat_template_kwargs": {"enable_thinking": true}}
+LLM_EXTRA_BODY = json.loads(os.environ.get("LLM_EXTRA_BODY") or "{}")
 
 # --- Serveurs MCP --------------------------------------------------------------
 FICHIER_MCP = pathlib.Path(
