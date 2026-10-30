@@ -7,7 +7,7 @@ résout des calculs posés en français sans jamais calculer lui-même**.
 > outil MCP, et où une réponse donnée « de tête » est refusée.
 
 Le tutoriel général (principe, StateGraph, brancher un LLM ou un MCP) se trouve
-sur la branche [`main`](https://github.com/floSa/MCP_maison/tree/main). Ce
+sur la branche [`main`](https://github.com/floSa/MCP-Agent-Test-Bench/tree/main). Ce
 document se concentre sur ce que la calculatrice ajoute.
 
 ## Pourquoi un arbitre

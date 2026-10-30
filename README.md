@@ -1,6 +1,8 @@
-# Calculatrice : un agent LangGraph + MCP avec arbitre
+# MCP Agent Test Bench, exemple calculatrice : agent LangGraph + MCP avec arbitre
 
-Un **exemple concret** du squelette [agent LangGraph + MCP](https://github.com/floSa/MCP_maison/tree/main) :
+> Ancien nom du dépôt : `MCP-Maison` (le dossier local portait le même nom). Les anciennes adresses GitHub redirigent vers celle-ci.
+
+Un **exemple concret** du squelette [agent LangGraph + MCP](https://github.com/floSa/MCP-Agent-Test-Bench/tree/main) :
 un LLM résout des calculs posés en français — « *trois fois quatre plus deux* » —
 **sans jamais calculer lui-même**. Chaque opération passe par un outil exposé
 via **MCP**, et un **arbitre** (un nœud du graphe) refuse toute étape qui ne
@@ -17,7 +19,7 @@ suit pas le vrai calcul. Le LLM est externe (Ollama ou vLLM).
 
 | Branche | Contenu |
 |---|---|
-| [`main`](https://github.com/floSa/MCP_maison/tree/main) | Le squelette générique et son tutoriel (principe, StateGraph, brancher un LLM ou un MCP). |
+| [`main`](https://github.com/floSa/MCP-Agent-Test-Bench/tree/main) | Le squelette générique et son tutoriel (principe, StateGraph, brancher un LLM ou un MCP). |
 | **`exemple/calculatrice`** (ici) | Le cas concret : calculatrice + arbitre anti-triche. |
 
 La documentation de cette branche : [la calculatrice et son arbitre](docs/calculatrice.md),
