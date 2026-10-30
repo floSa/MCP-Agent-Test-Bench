@@ -80,6 +80,20 @@ LLM_MODEL=gemma4:e4b
 (`VLLM_SERVED_NAMES`), de sorte que **le même `LLM_MODEL` fonctionne avec les
 deux moteurs**. Le reste de la procédure est celui du cas 1 (`make up`).
 
+### Gemma 4 sous vLLM : activer la réflexion
+
+Avec Gemma 4, vLLM désactive la « réflexion » du modèle par défaut. Constaté
+sur `vllm-central` : après un résultat d'outil, le modèle émet **un seul jeton
+puis s'arrête** et la réponse finale est vide. Il faut activer la réflexion dans
+`.env` :
+
+```
+LLM_EXTRA_BODY={"chat_template_kwargs": {"enable_thinking": true}}
+```
+
+`LLM_EXTRA_BODY` est un JSON ajouté tel quel à chaque requête. Avec Ollama, le
+laisser vide.
+
 Un vLLM monté à la main doit être lancé avec l'appel d'outils activé, sans quoi
 le modèle ne pourra pas utiliser les serveurs MCP :
 

@@ -59,6 +59,7 @@ services:
       LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama-central:11434/v1}
       LLM_MODEL: ${LLM_MODEL:-gemma4:e4b}
       LLM_API_KEY: ${LLM_API_KEY:-inutile}
+      LLM_EXTRA_BODY: ${LLM_EXTRA_BODY:-}
     depends_on:
       mcp-maths:
         condition: service_healthy
