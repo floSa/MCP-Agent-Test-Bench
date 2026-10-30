@@ -1,0 +1,10 @@
+{
+  "maths": {
+    "transport": "streamable_http",
+    "url": "http://mcp-maths:8000/mcp/"
+  },
+  "texte": {
+    "transport": "streamable_http",
+    "url": "http://mcp-texte:8000/mcp/"
+  }
+}
