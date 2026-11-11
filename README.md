@@ -4,7 +4,7 @@
 
 Un squelette **pédagogique et réutilisable** pour brancher un ou plusieurs
 serveurs **MCP** (Model Context Protocol) sur un **agent LangGraph**, avec un
-LLM servi à part (Ollama ou vLLM).
+LLM servi à part (service central LLM-Service).
 
 Ce dépôt répond à une question : *comment permettre à un agent d'utiliser de
 nouveaux outils (calculer, chercher, lire un fichier…) sans modifier le code de
@@ -31,22 +31,21 @@ du LLM.
 
 ## Démarrage rapide
 
-Prérequis : Docker, et un LLM servi en Ollama ou vLLM
-(voir [brancher un LLM](docs/03-brancher-un-llm.md)).
+Prérequis : Docker, et le service LLM central **LLM-Service** démarré (réseau
+Docker `llm-net`, API OpenAI sur `http://llm-central:8080/v1`, modèle `chat`).
+Voir [brancher un LLM](docs/03-brancher-un-llm.md).
 
 ```bash
-cp .env.example .env     # puis adapter LLM_BASE_URL et LLM_MODEL
+cp .env.example .env     # puis renseigner LLM_API_KEY (LITELLM_MASTER_KEY de LLM-Service)
 make up                  # branche l'agent sur le service LLM central
 make demo                # une question, avec la trace des appels MCP
 ```
 
-Sans service LLM central : `make up-local` embarque un Ollama dans la stack.
-
 | Interface | Adresse |
 |---|---|
 | Chat (Streamlit) | <http://localhost:8501> |
-| API de l'agent | <http://localhost:8080/docs> |
-| Outils découverts | <http://localhost:8080/outils> |
+| API de l'agent | <http://localhost:8090/docs> |
+| Outils découverts | <http://localhost:8090/outils> |
 | Inspecteur MCPJam | <http://localhost:6274> |
 
 ## Comment ça marche
@@ -60,7 +59,7 @@ flowchart LR
         ui["ui - Streamlit<br/>:8501"]
         mcpjam["mcpjam<br/>:6274<br/>inspecteur MCP"]
 
-        subgraph agent["agent - FastAPI + LangGraph - :8080"]
+        subgraph agent["agent - FastAPI + LangGraph - "]
             llm["nœud llm"]
             outils["nœud outils"]
             llm -->|"appel d'outil"| outils
@@ -71,7 +70,7 @@ flowchart LR
         texte["mcp-texte<br/>majuscules, compter_mots"]
     end
 
-    ext["LLM externe<br/>Ollama ou vLLM<br/>(API /v1)"]
+    ext["LLM-Service<br/>modèle chat<br/>(API OpenAI /v1)"]
 
     user --> ui
     ui -->|"POST /chat/stream"| agent
@@ -89,7 +88,7 @@ flowchart LR
 Trois idées à retenir :
 
 1. **Le LLM est externe.** Aucun modèle dans ce projet : un seul service
-   Ollama ou vLLM sert tous les projets. Seule l'URL change dans `.env`.
+   (LLM-Service) sert tous les projets. Adresse, modèle et clé se règlent dans `.env`.
 2. **Les outils viennent de serveurs MCP.** L'agent ne connaît aucun outil à
    l'avance : il les découvre dans les serveurs listés dans
    [`agent/mcp_servers.json`](agent/mcp_servers.json).
@@ -102,7 +101,7 @@ Trois idées à retenir :
 
 1. [Le principe : un agent, des outils, un LLM](docs/01-principe.md)
 2. [Le StateGraph de LangGraph](docs/02-state-graph.md)
-3. [Brancher un LLM (Ollama ou vLLM)](docs/03-brancher-un-llm.md)
+3. [Brancher le LLM central](docs/03-brancher-un-llm.md)
 4. [Brancher un ou plusieurs serveurs MCP](docs/04-brancher-un-mcp.md)
 5. [Aller plus loin (`create_agent`, Deep Agents, bonnes pratiques)](docs/05-aller-plus-loin.md)
 
@@ -115,15 +114,14 @@ agent/
   graphe.py          le StateGraph (le cœur à lire en premier)
   fabrique.py        branche le LLM et les serveurs MCP sur le graphe
   evenements.py      transforme le flux LangGraph en événements simples
-  config.py          LLM_BASE_URL, LLM_MODEL, liste des serveurs MCP
+  config.py          LLM_BASE_URL, LLM_MODEL, LLM_API_KEY, liste des serveurs MCP
   mcp_servers.json   les serveurs MCP à brancher
   app.py / cli.py    API HTTP (FastAPI) et ligne de commande
 mcp_servers/         deux serveurs MCP d'exemple (FastMCP)
 ui/                  interface de chat Streamlit
 tests/               tests avec faux LLM, et bout en bout avec le vrai
 docker-compose.yml               la stack, sans LLM
-docker-compose.llm-central.yml   override : se brancher sur le service LLM central
-docker-compose.llm-local.yml     override : Ollama embarqué
+docker-compose.llm-central.yml   override : rattache l'agent au réseau llm-net (externe)
 ```
 
 ## Tests

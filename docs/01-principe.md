@@ -8,7 +8,7 @@ Quatre acteurs interviennent.
 
 | Acteur | Rôle | Dans ce projet |
 |---|---|---|
-| **LLM** | Le « cerveau » : lit la conversation et décide quoi faire. Il ne sait qu'écrire du texte. | Ollama ou vLLM, hors de ce projet |
+| **LLM** | Le « cerveau » : lit la conversation et décide quoi faire. Il ne sait qu'écrire du texte. | LLM-Service (modèle `chat`), hors de ce projet |
 | **Agent** | Le « chef d'orchestre » : fait tourner la boucle entre le LLM et les outils. | `agent/` (graphe LangGraph) |
 | **Serveur MCP** | Le « magasin d'outils » : publie des fonctions utilisables par un agent. | `mcp_servers/` |
 | **Outil** | Une fonction concrète (`additionner`, `compter_mots`…). | Dans un serveur MCP |
@@ -19,7 +19,7 @@ flowchart LR
     subgraph agent_box["Agent (LangGraph)"]
         graphe["Graphe<br/>llm ⇄ outils"]
     end
-    llm["LLM<br/>Ollama ou vLLM"]
+    llm["LLM<br/>LLM-Service"]
     subgraph mcp["Serveurs MCP"]
         maths["mcp-maths<br/>additionner, multiplier"]
         texte["mcp-texte<br/>majuscules, compter_mots"]

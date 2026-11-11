@@ -1,128 +1,62 @@
-# 3. Brancher un LLM (Ollama ou vLLM)
+# 3. Brancher le LLM central (LLM-Service)
 
 ## Principe : un LLM partagé, pas un par projet
 
-Lancer un serveur de LLM par projet gaspille du disque (le même modèle
-téléchargé N fois) et surtout de la VRAM (le même modèle chargé N fois).
-L'approche retenue : **un seul service LLM**, que chaque projet appelle par le
-réseau.
+Lancer un serveur de LLM par projet gaspille du disque et de la VRAM. Un seul
+service, **LLM-Service**, est appelé par tous les projets via le réseau Docker
+externe `llm-net`.
 
 ```mermaid
 flowchart LR
-    subgraph llmsvc["Service LLM (repo llm-service) - un seul, toujours allumé"]
-        ollama["Ollama central<br/>gemma4, qwen3.5, ..."]
-        vllm["vLLM (optionnel)"]
+    subgraph llmsvc["LLM-Service - un seul, toujours allumé"]
+        central["llm-central (LiteLLM)<br/>API OpenAI :8080<br/>modèle « chat »"]
     end
     net{{"réseau Docker partagé llm-net"}}
     p1["Ce projet<br/>(agent)"]
-    p2["Autre projet A"]
-    p3["Autre projet B"]
-
+    p2["Autre projet"]
     p1 --> net
     p2 --> net
-    p3 --> net
-    net --> ollama
-    net -.-> vllm
+    net --> central
 ```
 
-Ce projet ne contient donc **aucun LLM** : [`docker-compose.yml`](../docker-compose.yml)
+Ce projet ne contient aucun LLM : [`docker-compose.yml`](../docker-compose.yml)
 lance seulement l'agent, l'interface et les serveurs MCP.
 
-## Une seule API pour Ollama et vLLM
+## Réglages (`.env`)
 
-Ollama et vLLM exposent tous deux une API **compatible OpenAI** sous `/v1`. Le
-client de l'agent (`ChatOpenAI`) est donc le même dans les deux cas : **seule
-l'URL change**. Tout se règle dans `.env` :
-
-| Serveur | `LLM_BASE_URL` | `LLM_MODEL` (exemple) |
+| Variable | Valeur | Rôle |
 |---|---|---|
-| Ollama central | `http://ollama-central:11434/v1` | `gemma4:e4b` |
-| vLLM central | `http://vllm-central:8000/v1` | `gemma4:e4b` (nom servi, voir `VLLM_SERVED_NAMES`) |
+| `LLM_BASE_URL` | `http://llm-central:8080/v1` (conteneur) ou `http://127.0.0.1:8080/v1` (hôte) | API OpenAI du service |
+| `LLM_MODEL` | `chat` | Qwen3.5-4B, réflexion + vision, contexte 16 384 jetons |
+| `LLM_API_KEY` | `LITELLM_MASTER_KEY` du `.env` de LLM-Service | clé obligatoire, jamais commitée |
+| `LLM_EXTRA_BODY` | `{"chat_template_kwargs": {"enable_thinking": false}}` | coupe la réflexion |
 
-`LLM_API_KEY` reste à `inutile`, sauf si le serveur impose une clé (vLLM lancé
-avec `--api-key`).
+Le `.env` n'est pas suivi par git ; seul [`.env.example`](../.env.example) l'est.
 
-## Cas 1 : brancher le service LLM central (défaut)
+## Démarrage
 
-1. Démarrer le service central (une fois pour tous les projets) : `make up` dans
-   le dépôt `llm-service`. Cela crée le réseau Docker `llm-net`.
-2. Copier [`.env.example`](../.env.example) en `.env`, vérifier `LLM_BASE_URL` et
-   `LLM_MODEL` (le modèle doit exister sur le service central : `ollama ls`).
-3. Démarrer ce projet :
+1. Démarrer LLM-Service (crée le réseau `llm-net`).
+2. `cp .env.example .env` puis renseigner `LLM_API_KEY`.
+3. `make up`.
 
-```bash
-make up
-```
+`make up` ajoute au compose de base
+[`docker-compose.llm-central.yml`](../docker-compose.llm-central.yml), qui
+rattache l'agent au réseau `llm-net` (`external: true`).
 
-Concrètement, `make up` ajoute au compose de base l'override
-[`docker-compose.llm-central.yml`](../docker-compose.llm-central.yml), qui fait
-une seule chose : rattacher l'agent au réseau `llm-net`. L'agent atteint alors
-le LLM par son nom de service (`ollama-central`).
+Le port 8080 de l'hôte étant occupé par LLM-Service, l'API de l'agent est
+publiée sur **8090** (`AGENT_PORT` pour le changer).
 
-## Cas 2 : vLLM
+## Réflexion désactivée
 
-Le dépôt `llm-service` propose les deux moteurs sur deux **branches** :
-`service-ollama` (conteneur `ollama-central`) et `service-vllm` (conteneur
-`vllm-central`). Les deux joignent le réseau `llm-net`.
-
-**Un seul moteur à la fois** sur un GPU de 16 Go : vLLM réserve sa VRAM dès le
-démarrage (80 % par défaut). Pour passer d'Ollama à vLLM, arrêter l'un
-(`make down`), basculer sur l'autre branche de `llm-service`, puis `make up`.
-
-Dans `.env` de ce projet :
-
-```
-LLM_BASE_URL=http://vllm-central:8000/v1
-LLM_MODEL=gemma4:e4b
-```
-
-`gemma4:e4b` est l'un des noms servis par `vllm-central`
-(`VLLM_SERVED_NAMES`), de sorte que **le même `LLM_MODEL` fonctionne avec les
-deux moteurs**. Le reste de la procédure est celui du cas 1 (`make up`).
-
-### Gemma 4 sous vLLM : activer la réflexion
-
-Avec Gemma 4, vLLM désactive la « réflexion » du modèle par défaut. Constaté
-sur `vllm-central` : après un résultat d'outil, le modèle émet **un seul jeton
-puis s'arrête** et la réponse finale est vide. Il faut activer la réflexion dans
-`.env` :
-
-```
-LLM_EXTRA_BODY={"chat_template_kwargs": {"enable_thinking": true}}
-```
-
-`LLM_EXTRA_BODY` est un JSON ajouté tel quel à chaque requête. Avec Ollama, le
-laisser vide.
-
-Un vLLM monté à la main doit être lancé avec l'appel d'outils activé, sans quoi
-le modèle ne pourra pas utiliser les serveurs MCP :
-
-```bash
-vllm serve <modèle> --enable-auto-tool-choice --tool-call-parser <parser>
-```
-
-Le `<parser>` dépend de la famille de modèle (voir la documentation vLLM,
-section *Tool Calling*).
-
-## Cas 3 : pas de service central, Ollama embarqué
-
-```bash
-make up-local
-```
-
-L'override [`docker-compose.llm-local.yml`](../docker-compose.llm-local.yml)
-ajoute un conteneur Ollama à la stack et télécharge `LLM_MODEL` au premier
-démarrage. À réserver aux machines sans service central : chaque projet lancé
-ainsi charge son propre exemplaire du modèle.
-
-Sans GPU nvidia, supprimer le bloc `deploy` de cet override ; l'inférence passe
-alors sur CPU, bien plus lentement.
+La réflexion est active par défaut sur `chat`. Pour un agent à outils, elle
+allonge les réponses sans bénéfice : `LLM_EXTRA_BODY` la coupe via
+`chat_template_kwargs`. Pour la réactiver, laisser `LLM_EXTRA_BODY` vide ; le
+raisonnement arrive alors dans `message.reasoning_content`.
 
 ## Choisir un modèle
 
 L'agent exige un modèle qui sait **appeler des outils** (*function calling*).
-`gemma4:e4b`, `qwen3.5:9b` et `granite4.2:8b` conviennent. Un modèle trop petit
-(autour de 1,5 milliard de paramètres) rate régulièrement ses appels d'outils.
+`chat` convient (essai réel : appels `additionner` puis `mettre_en_majuscules`).
 
 ## Où se fait le branchement dans le code
 
@@ -130,7 +64,7 @@ Une seule fonction, [`creer_modele()`](../agent/fabrique.py) :
 
 ```python
 ChatOpenAI(base_url=config.LLM_BASE_URL, api_key=config.LLM_API_KEY,
-           model=config.LLM_MODEL, temperature=0)
+           model=config.LLM_MODEL, temperature=0, extra_body=...)
 ```
 
 Rien d'autre dans le projet ne connaît le LLM.
