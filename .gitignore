@@ -6,3 +6,6 @@ __pycache__/
 *.clean
 debug_payload.json
 *.tmp
+
+# Secrets locaux (clé du service LLM) : jamais suivis
+.env
