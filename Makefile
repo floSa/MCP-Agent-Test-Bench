@@ -1,15 +1,12 @@
 # Raccourcis (équivalents docker compose dans le README)
 
 CENTRAL = -f docker-compose.yml -f docker-compose.llm-central.yml
-LOCAL   = -f docker-compose.yml -f docker-compose.llm-local.yml
 
-.PHONY: up up-local down logs test test-e2e demo urls
+.PHONY: up down logs test test-e2e demo urls
 
 up:            ## démarre la stack, branchée sur le service LLM central
 	docker compose $(CENTRAL) up -d --build
 
-up-local:      ## démarre la stack avec un Ollama embarqué
-	docker compose $(LOCAL) up -d --build
 
 down:          ## arrête tout
 	docker compose $(CENTRAL) down
@@ -29,4 +26,4 @@ demo:          ## une question posée au vrai agent, trace pas-à-pas
 urls:          ## rappel des interfaces
 	@echo "Streamlit : http://localhost:8501"
 	@echo "MCPJam    : http://localhost:6274  (serveur MCP : http://mcp-maths:8000/mcp/)"
-	@echo "API agent : http://localhost:8080  (docs : /docs, outils : /outils)"
+	@echo "API agent : http://localhost:8090  (docs : /docs, outils : /outils)"

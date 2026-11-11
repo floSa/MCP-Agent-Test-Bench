@@ -1,6 +1,6 @@
 # =============================================================================
 # Squelette : un agent LangGraph branché sur des serveurs MCP et sur un LLM
-# EXTERNE (Ollama ou vLLM). Ce fichier ne contient aucun LLM.
+# EXTERNE (service LLM-Service). Ce fichier ne contient aucun LLM.
 #
 #   ┌────────┐       ┌──────────────────────┐   MCP (HTTP)   ┌────────────┐
 #   │   ui   │ ────▶ │ agent  (LangGraph)   │ ─────────────▶ │ mcp-maths  │
@@ -8,11 +8,10 @@
 #                    └──────────┬───────────┘                └────────────┘
 #                               │ API /v1 (compatible OpenAI)
 #                               ▼
-#                    LLM : Ollama central, vLLM, ou Ollama local
+#                    LLM : service central LLM-Service (réseau llm-net)
 #
-# Le LLM se choisit par un fichier d'override (voir le Makefile) :
-#   make up         -> docker-compose.llm-central.yml (service LLM partagé)
-#   make up-local   -> docker-compose.llm-local.yml   (Ollama embarqué)
+# Le réseau llm-net (externe) est rattaché par docker-compose.llm-central.yml :
+#   make up         -> docker-compose.yml + docker-compose.llm-central.yml
 #
 # Tests (sans LLM) : docker compose --profile test run --rm tests
 # Tests e2e        : docker compose --profile e2e run --rm tests-e2e
@@ -53,12 +52,12 @@ services:
     build: ./agent
     container_name: agent
     ports:
-      - "8080:8080"
+      - "${AGENT_PORT:-8090}:8080"
     environment:
       # Valeurs par défaut : voir agent/config.py et .env.example.
-      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama-central:11434/v1}
-      LLM_MODEL: ${LLM_MODEL:-gemma4:e4b}
-      LLM_API_KEY: ${LLM_API_KEY:-inutile}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://llm-central:8080/v1}
+      LLM_MODEL: ${LLM_MODEL:-chat}
+      LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_EXTRA_BODY: ${LLM_EXTRA_BODY:-}
     depends_on:
       mcp-maths:

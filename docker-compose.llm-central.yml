@@ -1,10 +1,8 @@
-# Override : l'agent se branche sur le service LLM CENTRAL (repo llm-service).
+# Override : l'agent se branche sur le service LLM CENTRAL (repo LLM-Service).
 #
-# Le réseau Docker partagé « llm-net » est créé par `make up` dans llm-service.
-# Les services y résolvent le LLM par son nom : ollama-central, ou le nom du
-# service vLLM. Le choix du serveur et du modèle se fait dans .env :
-#   LLM_BASE_URL=http://ollama-central:11434/v1
-#   LLM_MODEL=gemma4:e4b
+# Le réseau Docker partagé « llm-net » est créé par LLM-Service. L'agent y
+# joint le conteneur « llm-central » (LiteLLM, API OpenAI sur le port 8080).
+# L'adresse, le modèle et la clé se règlent dans .env (voir .env.example).
 services:
   agent:
     networks:

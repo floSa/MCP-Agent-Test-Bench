@@ -39,7 +39,7 @@ docker compose -f docker-compose.yml -f docker-compose.llm-central.yml up -d --b
 ```
 
 Le serveur doit être joignable depuis le conteneur de l'agent : même réseau
-Docker, ou URL publique. Contrôle immédiat : `curl localhost:8080/outils` doit
+Docker, ou URL publique. Contrôle immédiat : `curl localhost:8090/outils` doit
 lister les nouveaux outils.
 
 ## Cas B : écrire son propre serveur MCP

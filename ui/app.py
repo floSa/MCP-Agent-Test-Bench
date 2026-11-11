@@ -12,7 +12,7 @@ import os
 import httpx
 import streamlit as st
 
-AGENT_URL = os.environ.get("AGENT_URL", "http://localhost:8080")
+AGENT_URL = os.environ.get("AGENT_URL", "http://localhost:8090")
 
 # Quelques questions toutes pretes, proposees dans la barre laterale.
 EXEMPLES = [

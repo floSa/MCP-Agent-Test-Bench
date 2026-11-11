@@ -11,7 +11,7 @@ import pytest
 
 pytestmark = pytest.mark.e2e
 
-AGENT_URL = os.environ.get("AGENT_URL", "http://localhost:8080")
+AGENT_URL = os.environ.get("AGENT_URL", "http://localhost:8090")
 UI_URL = os.environ.get("UI_URL", "http://ui:8501")
 DELAI = httpx.Timeout(600.0)
 
