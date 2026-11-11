@@ -9,18 +9,16 @@ import os
 import pathlib
 
 # --- LLM ---------------------------------------------------------------------
-# Ollama et vLLM exposent la même API (compatible OpenAI) sous /v1 : un seul
-# client suffit, seule l'URL change.
-#   Ollama central : http://ollama-central:11434/v1
-#   vLLM           : http://<service-vllm>:8000/v1
-LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://ollama-central:11434/v1")
-LLM_MODEL = os.environ.get("LLM_MODEL", "gemma4:e4b")
-# Ollama ignore la clé ; vLLM l'exige seulement s'il a été lancé avec --api-key.
-LLM_API_KEY = os.environ.get("LLM_API_KEY", "inutile")
+# Service LLM central (LLM-Service, API compatible OpenAI sous /v1) :
+#   depuis un conteneur du réseau llm-net : http://llm-central:8080/v1
+#   depuis l'hôte                          : http://127.0.0.1:8080/v1
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://llm-central:8080/v1")
+LLM_MODEL = os.environ.get("LLM_MODEL", "chat")
+# Clé du service (LITELLM_MASTER_KEY de LLM-Service), à fournir dans .env.
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 # Paramètres supplémentaires ajoutés à chaque requête, en JSON. Vide par défaut.
-# Exemple pour Gemma 4 sous vLLM, qui s'arrête net après un résultat d'outil
-# si sa réflexion est désactivée :
-#   LLM_EXTRA_BODY={"chat_template_kwargs": {"enable_thinking": true}}
+# La réflexion est active par défaut sur « chat » ; pour la couper :
+#   LLM_EXTRA_BODY={"chat_template_kwargs": {"enable_thinking": false}}
 LLM_EXTRA_BODY = json.loads(os.environ.get("LLM_EXTRA_BODY") or "{}")
 
 # --- Serveurs MCP --------------------------------------------------------------

@@ -13,10 +13,10 @@ from agent.graphe import construire_graphe
 
 
 def creer_modele() -> ChatOpenAI:
-    """Client LLM : Ollama ou vLLM, selon LLM_BASE_URL."""
+    """Client LLM : service central LLM-Service (API OpenAI)."""
     return ChatOpenAI(
         base_url=config.LLM_BASE_URL,
-        api_key=config.LLM_API_KEY,
+        api_key=config.LLM_API_KEY or "inutile",
         model=config.LLM_MODEL,
         temperature=0,
         timeout=300,
