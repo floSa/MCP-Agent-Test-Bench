@@ -14,7 +14,7 @@ import pathlib
 #   depuis l'hôte                          : http://127.0.0.1:8080/v1
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://llm-central:8080/v1")
 LLM_MODEL = os.environ.get("LLM_MODEL", "chat")
-# Clé du service (LITELLM_MASTER_KEY de LLM-Service), à fournir dans .env.
+# Clé propre de l'application (LLM-Service/scripts/cle.sh creer), à fournir dans .env.
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 # Paramètres supplémentaires ajoutés à chaque requête, en JSON. Vide par défaut.
 # La réflexion est active par défaut sur « chat » ; pour la couper :

@@ -28,7 +28,7 @@ lance seulement l'agent, l'interface et les serveurs MCP.
 |---|---|---|
 | `LLM_BASE_URL` | `http://llm-central:8080/v1` (conteneur) ou `http://127.0.0.1:8080/v1` (hôte) | API OpenAI du service |
 | `LLM_MODEL` | `chat` | Qwen3.5-4B, réflexion + vision, contexte 16 384 jetons |
-| `LLM_API_KEY` | `LITELLM_MASTER_KEY` du `.env` de LLM-Service | clé obligatoire, jamais commitée |
+| `LLM_API_KEY` | clé propre « mcp-agent-test-bench » (jamais la clé maîtresse de LLM-Service) | clé obligatoire, jamais commitée |
 | `LLM_EXTRA_BODY` | `{"chat_template_kwargs": {"enable_thinking": false}}` | coupe la réflexion |
 
 Le `.env` n'est pas suivi par git ; seul [`.env.example`](../.env.example) l'est.
@@ -36,8 +36,20 @@ Le `.env` n'est pas suivi par git ; seul [`.env.example`](../.env.example) l'est
 ## Démarrage
 
 1. Démarrer LLM-Service (crée le réseau `llm-net`).
-2. `cp .env.example .env` puis renseigner `LLM_API_KEY`.
-3. `make up`.
+2. `cp .env.example .env` puis écrire la clé propre de l'application et
+   l'adresse conteneur dans `.env` :
+   `~/mes_projets/Projet-IA/LLM-Service/scripts/cle.sh creer mcp-agent-test-bench --dans <dépôt>/.env --noms LLM_BASE_URL,LLM_API_KEY`
+   (procédure : `LLM-Service/docs/brancher-une-application.md`). Révocation :
+   `scripts/cle.sh revoquer mcp-agent-test-bench` ; consommation :
+   `scripts/cle.sh consommation` (depuis le dépôt LLM-Service).
+3. Lier les ports publiés à `127.0.0.1` (voir ci-dessous), puis `make up`.
+
+### Ports publiés sur toutes les interfaces (point ouvert)
+
+[`docker-compose.yml`](../docker-compose.yml) publie 8101, 8102, 8090, 8501
+et 6274 sans adresse, donc sur toutes les interfaces de la machine. Avant de
+lancer la pile, les lier à `127.0.0.1` (par exemple `"127.0.0.1:8501:8501"`).
+Le compose n'est pas encore modifié : point laissé à décider.
 
 `make up` ajoute au compose de base
 [`docker-compose.llm-central.yml`](../docker-compose.llm-central.yml), qui
@@ -45,6 +57,18 @@ rattache l'agent au réseau `llm-net` (`external: true`).
 
 Le port 8080 de l'hôte étant occupé par LLM-Service, l'API de l'agent est
 publiée sur **8090** (`AGENT_PORT` pour le changer).
+
+## Essai réel avec la clé propre (14/11/2026)
+
+Conteneur ponctuel, sans port publié :
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.llm-central.yml \
+  run --rm --no-deps --build agent \
+  python -c "from agent.fabrique import creer_modele; print(creer_modele().invoke('Dis bonjour en un mot.').content)"
+```
+
+Réponse : « Bonjour » (21 jetons comptés sur la clé `mcp-agent-test-bench`).
 
 ## Réflexion désactivée
 

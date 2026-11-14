@@ -36,10 +36,15 @@ Docker `llm-net`, API OpenAI sur `http://llm-central:8080/v1`, modèle `chat`).
 Voir [brancher un LLM](docs/03-brancher-un-llm.md).
 
 ```bash
-cp .env.example .env     # puis renseigner LLM_API_KEY (LITELLM_MASTER_KEY de LLM-Service)
+cp .env.example .env     # puis clé propre (jamais la clé maîtresse) écrite dans .env par :
+~/mes_projets/Projet-IA/LLM-Service/scripts/cle.sh creer mcp-agent-test-bench \
+  --dans "$PWD/.env" --noms LLM_BASE_URL,LLM_API_KEY
 make up                  # branche l'agent sur le service LLM central
 make demo                # une question, avec la trace des appels MCP
 ```
+
+Attention : le compose publie ses ports (8101, 8102, 8090, 8501, 6274) sur toutes les
+interfaces ; les lier à `127.0.0.1` avant `make up` (point ouvert, voir [brancher un LLM](docs/03-brancher-un-llm.md)).
 
 | Interface | Adresse |
 |---|---|
